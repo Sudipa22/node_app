@@ -23,7 +23,7 @@ pipeline {
        
              //git credentialsId: 'bitbucket_Url', url: 'http://rig@18.224.68.30:7990/scm/dem/app.git'
               //gitcheckout("main","https://github.com/Sudipa22/node_app.git/")
-               git 'https://github.com/nitinkundu/node_app.git'
+               git 'https://github.com/Sudipa22/node_app.git'
               }
             }
             
