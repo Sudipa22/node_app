@@ -67,11 +67,11 @@ pipeline {
                 then
                 echo "from if block"
                 docker kill nodejs_app && docker rm nodejs_app
-                docker run -d -p 3456:8080 --name nodejs_app "${registry}":"${BUILD_NUMBER}"
+                docker run -d -p 49160:8080 --name nodejs_app "${registry}":"${BUILD_NUMBER}"
                 docker ps
                else
                 echo "from else block"
-                docker run -d -p 3456:8080 --name nodejs_app "${registry}":"${BUILD_NUMBER}"
+                docker run -d -p 49160:8080 --name nodejs_app "${registry}":"${BUILD_NUMBER}"
                 docker ps
                 fi
                '''
