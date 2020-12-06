@@ -1,73 +1,85 @@
-pipeline 
-{
+@Library('sudipa')_
+ 
+pipeline {
+    environment { 
+        registry = "sudipa2020/sample-nodeapp" 
+        registryCredential = 'docker-id' 
+        dockerImage = '' 
+    }
     agent any
-    
-    
-    tools {nodejs "nodejs"}
-    
-    
-    
     stages {
-       
-        stage('installing dependencies') {
+        stage('Initialize')
+        {
             steps {
-               sh 'npm install'
-            }
-        }
-         /* stage('test') {
-              steps {
-                 sh 'npm run test'
-              }
-         }*/
-       /* stage('SonarQube') {    
-              steps {
-              sh 'npm install sonarqube-scanner --save-dev'
-              sh 'npm run sonar' 
-           }
-        }*/          
-      
-       
-        stage('build') {
-            steps {
-                sh 'npm run build'
-                
-            }
-        }
-        stage ('zipping'){
-            steps {
-                 
-                sh 'cd dist/angularclient; zip -r ../../abcApp.zip . ;'
-            }
-        }
-        stage ('Nexus'){
-            steps{
-                sh 'ls'
-                withCredentials([usernamePassword(credentialsId: 'sudipa_nexus', passwordVariable: 'pass', usernameVariable: 'usr')]) {
-                 sh label: '', script: 'curl -u ${usr}:${pass} --upload-file abcApp.zip http://ec2-3-17-164-37.us-east-2.compute.amazonaws.com:8081/nexus/content/repositories/devopstraining/Frontend_Angular/abcApp.zip'
+                script {
+        def dockerHome = tool 'docker'
+        env.PATH = "${dockerHome}/bin:${env.PATH}"
                 }
-                
             }
         }
-        stage ('Deploy') {
+ 
+        stage('Checkout') {
+            steps{
+       
+             //git credentialsId: 'bitbucket_Url', url: 'http://rig@18.224.68.30:7990/scm/dem/app.git'
+              //gitcheckout("main","https://github.com/Sudipa22/node_app.git/")
+               git 'https://github.com/nitinkundu/node_app.git'
+              }
+            }
+            
+            stage('Building our image')
+        {
+            steps
+            {
+                sh 'docker --version'
+                script
+                {
+                    dockerImage = docker.build registry + ":$BUILD_NUMBER"
+                }
+            }
+        }
+            
+            
+            stage('Push our image') {
             steps {
-              withCredentials([file(credentialsId: 'angular-react-deployment-server', variable: 'deployment_server')]) {
-                   sh 'scp -v -i ${deployment_server} abcApp.zip ubuntu@18.188.202.13:/home/ubuntu'
-                   sh 'ssh -v -i ${deployment_server} ubuntu@18.188.202.13 "cd /home/ubuntu; unzip -o abcApp.zip -d angular__App;pm2 restart "angular__App""'
-                  
-               }
+                script {
+                    docker.withRegistry( '', registryCredential ) {
+                        dockerImage.push()
+                    }
+                }
             }
+            }
+            stage('Pull our image'){
+            steps{
+                script{
+                    docker.withRegistry( '', registryCredential ) {
+                        dockerImage.pull()
+                   
+                }
+            }
+            sh  'docker images'
         }
-        
     }
-    post { 
-         success { 
+    stage('Run Image'){
+           steps{
+               sh ''' 
+               if [ $(docker ps -qf "name=nodejs_app") ]
+                then
+                echo "from if block"
+                docker kill nodejs_app && docker rm nodejs_app
+                docker run -d -p 3456:8080 --name nodejs_app "${registry}":"${BUILD_NUMBER}"
+                docker ps
+               else
+                echo "from else block"
+                docker run -d -p 3456:8080 --name nodejs_app "${registry}":"${BUILD_NUMBER}"
+                docker ps
+                fi
+               '''
+           }
+       }   
+     
             
-            slackSend (color: '#00BB00', message: " SUCCESS: Job '${JOB_NAME} [${BUILD_NUMBER}]' (${BUILD_URL})")
-         }
-         failure {
             
-            slackSend (color: '#BB0000', message: " FAILURE: Job '${JOB_NAME} [${BUILD_NUMBER}]' (${BUILD_URL})")
-         }
+            
     }
-
 }
