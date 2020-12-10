@@ -1,4 +1,3 @@
-@Library('sudipa')_
  
 pipeline {
     environment { 
